@@ -2,8 +2,37 @@ import React from "react";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
-const JobsPage = async () => {
-  const jobs = await prisma.job.findMany({orderBy: {postedAt: 'desc'}, include: {postedBy: true}});
+const JobsPage = async ({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) => {
+  const {q, type, location} = await searchParams;
+
+  const query = q as string | undefined;
+  const searchType = type as string | undefined;
+  const searchLocation = location as string | undefined;
+
+
+  const jobs = await prisma.job.findMany({
+    where: {
+      AND: [
+        query
+          ? {
+              OR: [
+                { title: { contains: query, mode: "insensitive" } },
+                { company: { contains: query, mode: "insensitive" } },
+                { description: { contains: query, mode: "insensitive" } },
+              ],
+            }
+          : {},
+        type ? { type: searchType } : {},
+        searchLocation ? {location: {contains: searchLocation, mode: "insensitive"}} : {},
+      ],
+    },
+    orderBy: { postedAt: "desc" },
+    include: { postedBy: true },
+  });
 
   return (
     <div className="space-y-8">
